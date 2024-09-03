@@ -1,0 +1,6 @@
+[sms]
+path = "/path/to/sms/folder"
+
+[bot]
+token = "TELEGRAM_BOT_TOKEN"
+admin_id = 123456789         # Your telegram ID
