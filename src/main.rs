@@ -127,9 +127,17 @@ async fn tail_handler(bot: Bot, message: Message, command: Command) -> ResponseR
         // Read the last N lines from history_path
         match read_last_n_lines(&config.sms.history_path, n).await {
             Ok(lines) => {
-                bot.send_message(message.chat.id, format!("```\n{}\n```", lines))
-                    .parse_mode(ParseMode::MarkdownV2)
-                    .await?;
+                let lines_vec: Vec<&str> = lines.split('\n').collect();
+                for chunk in lines_vec.chunks(50) {
+                    let chunk_str = chunk.join("\n");
+                    let sent = bot
+                        .send_message(message.chat.id, format!("```\n{}\n```", chunk_str))
+                        .parse_mode(ParseMode::MarkdownV2)
+                        .await;
+                    if let Err(e) = sent {
+                        eprintln!("Failed to send message: {:?}", e);
+                    }
+                }
             }
             Err(e) => {
                 bot.send_message(message.chat.id, format!("Error: {}", e))
@@ -195,7 +203,7 @@ async fn read_last_n_lines<P: AsRef<Path>>(
     reader.seek(std::io::SeekFrom::Start(start_pos)).await?;
     reader.read_to_end(&mut buffer).await?;
 
-    Ok(String::from_utf8_lossy(&buffer).to_string())
+    Ok(escape_markdown(&String::from_utf8_lossy(&buffer)))
 }
 
 fn escape_markdown(contents: &str) -> String {
